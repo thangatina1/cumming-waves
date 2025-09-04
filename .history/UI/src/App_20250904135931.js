@@ -11,7 +11,6 @@ import FindDirections from "./Components/FindDirections";
 import PayPalPaymentComponent from "./Components/PayPalPaymentComponent";
 import Navbar from "./Components/Navbar";
 import Register from "./Components/Register";
-import JoinNow from "./Components/JoinNow";
 import Login from "./Components/Login";
 import AdminLogin from "./Components/AdminLogin";
 import ScheduleTryout from "./Components/ScheduleTryout";
@@ -38,7 +37,6 @@ function App() {
         <Route path="/calendar" element={<SchoolYearCalendar />} />
         <Route path="/directions" element={<FindDirections />} />
         <Route path="/payment" element={<PayPalPaymentComponent />} />
-  <Route path="/schedule-tryout" element={<ScheduleTryout />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />

@@ -38,8 +38,7 @@ function App() {
         <Route path="/calendar" element={<SchoolYearCalendar />} />
         <Route path="/directions" element={<FindDirections />} />
         <Route path="/payment" element={<PayPalPaymentComponent />} />
-  <Route path="/schedule-tryout" element={<ScheduleTryout />} />
-        <Route path="/register" element={<Register />} />
+  <Route path="/register" element={<JoinNow />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/coach-home" element={<CoachHome />} />

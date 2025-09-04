@@ -2,7 +2,7 @@
 
 .home-action-buttons {
   display: flex;
-  gap: 96px;
+  gap: 64px;
   margin-top: 16px;
   padding-bottom: 32px;
 }

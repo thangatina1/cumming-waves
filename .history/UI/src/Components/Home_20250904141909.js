@@ -21,14 +21,13 @@ const Home = () => {
             Join our community of passionate swimmers and coaches, and take your skills to the next level. We provide a supportive and competitive environment to help you achieve your goals.
           </p>
           
-          <div className="home-action-buttons">
-            <button className="primary-button" onClick={() => navigate("/schedule-tryout") }>
-              Schedule Tryout <FiArrowRight />
-            </button>
-            <button className="primary-button" onClick={() => navigate("/register") }>
-              Register Swimmer  <FiArrowRight />
-            </button>
-          </div>
+          <button className="primary-button" style={{textDecoration: 'none'}} onClick={() => navigate("/scheduleryout") }>
+            Schedule Tryout <FiArrowRight />
+          </button>
+
+          <button className="primary-button" style={{textDecoration: 'none'}} onClick={() => navigate("/register") }>
+            Register Swimmer  <FiArrowRight />
+          </button>
         </div>
         <div className="home-image-section">
           <img src={BannerImage} alt="" />
