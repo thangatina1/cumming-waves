@@ -1,0 +1,31 @@
+/* Styles for CoachLogin component */
+.login-container {
+  max-width: 400px;
+  margin: 60px auto 0 auto;
+  background: #fff;
+  border-radius: 1.2rem;
+  box-shadow: 0 2px 12px #0077b61a;
+  padding: 2.5rem 2rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+.login-form input {
+  padding: 0.8rem 1.2rem;
+  border-radius: 2rem;
+  border: 1px solid #b0c4de;
+  font-size: 1.1rem;
+  outline: none;
+}
+.login-form input:focus {
+  border-color: #0077b6;
+}
+.login-form button.primary-button {
+  margin-top: 10px;
+}
