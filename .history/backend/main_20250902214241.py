@@ -1,0 +1,300 @@
+
+# Card validation helpers (Luhn algorithm and expiry check)
+def luhn_checksum(card_number):
+    def digits_of(n):
+        return [int(d) for d in str(n)]
+    digits = digits_of(card_number)
+    odd_digits = digits[-1::-2]
+    even_digits = digits[-2::-2]
+    checksum = sum(odd_digits)
+    for d in even_digits:
+        checksum += sum(digits_of(d*2))
+    return checksum % 10
+
+def is_valid_card(card_number):
+    card_number = card_number.replace(' ', '')
+    if not card_number.isdigit() or len(card_number) < 13 or len(card_number) > 19:
+        return False
+    return luhn_checksum(card_number) == 0
+
+def is_valid_expiry(expiry):
+    try:
+        month, year = expiry.split('/')
+        month = int(month)
+        year = int(year)
+        if year < 100:
+            year += 2000
+        now = datetime.datetime.now()
+        if month < 1 or month > 12:
+            return False
+        exp_date = datetime.datetime(year, month, 1)
+        # Card valid through end of expiry month
+        exp_date = exp_date + datetime.timedelta(days=31)
+        return exp_date > now
+    except Exception:
+        return False
+
+# API to validate card and process payment (no storage)
+from fastapi import Body
+@app.post("/process-card-payment")
+async def process_card_payment(
+    card_number: str = Body(...),
+    name: str = Body(...),
+    expiry: str = Body(...),
+    cvc: str = Body(...),
+    amount: float = Body(...)
+):
+    # Validate card number
+    if not is_valid_card(card_number):
+        return JSONResponse({'error': 'Invalid card number.'}, status_code=400)
+    # Validate expiry
+    if not is_valid_expiry(expiry):
+        return JSONResponse({'error': 'Invalid or expired card expiry.'}, status_code=400)
+    # Validate CVC
+    if not cvc.isdigit() or not (3 <= len(cvc) <= 4):
+        return JSONResponse({'error': 'Invalid CVC.'}, status_code=400)
+    # Validate amount
+    if amount <= 0:
+        return JSONResponse({'error': 'Invalid payment amount.'}, status_code=400)
+    # Simulate payment processing (no storage)
+    # In production, integrate with a payment gateway here
+    return JSONResponse({'message': 'Payment processed successfully! (Demo)', 'amount': amount})
+# API to get all parents and swimmers with at least one pending payment
+
+@app.get("/parents-with-pending-payments")
+async def parents_with_pending_payments():
+    parents = {str(p['_id']): p for p in db['parents'].find()}
+    swimmers = list(db['swimmers'].find())
+    result = []
+    for s in swimmers:
+        for entry in s.get('payment_log', []):
+            if entry['status'] == 'Due':
+                parent_id = str(s['parent_id'])
+                parent = parents.get(parent_id)
+                if parent:
+                    # Remove password for security
+                    parent_copy = dict(parent)
+                    parent_copy.pop('password', None)
+                    s_copy = dict(s)
+                    s_copy.pop('password', None)
+                    # Convert ObjectId to str
+                    parent_copy['_id'] = str(parent_copy['_id'])
+                    s_copy['_id'] = str(s_copy['_id'])
+                    s_copy['parent_id'] = str(s_copy['parent_id'])
+                    result.append({'parent': parent_copy, 'swimmer': s_copy})
+                break
+    return result
+
+SECRET_KEY = "supersecretkey123"  # Use env var in production
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
+app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+client = MongoClient('mongodb://localhost:27017/')
+db = client['cumming-waves-db']
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    payload = decode_access_token(token)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    return payload
+
+# Swimmer registration endpoint
+@app.post("/register")
+async def register_swimmer(request: Request):
+    data = await request.json()
+    name = data.get('name', '').strip()
+    age = data.get('age')
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    confirm_password = data.get('confirmPassword', '')
+
+    # Validation
+    if not name:
+        return JSONResponse({'error': "Name is required."}, status_code=400)
+    try:
+        age = int(age)
+        if age < 3 or age > 100:
+            return JSONResponse({'error': "Age must be between 3 and 100."}, status_code=400)
+    except Exception:
+        return JSONResponse({'error': "Valid age is required."}, status_code=400)
+    if not re.match(r"^\S+@\S+\.\S+$", email):
+        return JSONResponse({'error': "Valid email is required."}, status_code=400)
+    if len(password) < 6:
+        return JSONResponse({'error': "Password must be at least 6 characters."}, status_code=400)
+    if password != confirm_password:
+        return JSONResponse({'error': "Passwords do not match."}, status_code=400)
+
+    # Check for existing email
+    if db['swimmers'].find_one({'email': email}):
+        return JSONResponse({'error': "Email already registered."}, status_code=400)
+
+    # Save swimmer
+    db['swimmers'].insert_one({
+        'name': name,
+        'age': age,
+        'email': email,
+        'password': password  # In production, hash the password!
+    })
+
+    return JSONResponse({'message': f"Swimmer {name} registered successfully!"})
+
+
+# Swimmer login endpoint
+@app.post("/login")
+async def login_swimmer(request: Request):
+    data = await request.json()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    swimmer = db['swimmers'].find_one({'email': email})
+    if not swimmer or swimmer.get('password') != password:
+        return JSONResponse({'error': 'Invalid email or password.'}, status_code=401)
+    return JSONResponse({'message': 'Login successful!', 'name': swimmer.get('name')})
+
+# Parent login endpoint (returns JWT)
+@app.post("/parent-login")
+async def parent_login(request: Request):
+    data = await request.json()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    parent = db['parents'].find_one({'email': email})
+    if not parent or parent.get('password') != password:
+        return JSONResponse({'error': 'Invalid parent credentials.'}, status_code=401)
+    # Issue JWT
+    access_token = create_access_token(
+        data={"sub": email, "role": "parent"},
+        expires_delta=datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    # Get all swimmers for this parent
+    swimmers = list(db['swimmers'].find({'parent_id': parent['_id']}))
+    for swimmer in swimmers:
+        swimmer['_id'] = str(swimmer['_id'])
+        swimmer['parent_id'] = str(swimmer['parent_id'])
+        # Ensure training_group is present
+        if 'training_group' not in swimmer:
+            swimmer['training_group'] = 'Not Assigned'
+    parent['_id'] = str(parent['_id'])
+    parent.pop('password', None)
+    if 'profilePic' not in parent:
+        parent['profilePic'] = 'https://randomuser.me/api/portraits/lego/1.jpg'
+    for swimmer in swimmers:
+        if 'profilePic' not in swimmer:
+            swimmer['profilePic'] = 'https://randomuser.me/api/portraits/lego/2.jpg'
+    return JSONResponse({
+        'access_token': access_token,
+        'token_type': 'bearer',
+        'parent': parent,
+        'swimmers': swimmers
+    })
+
+# Protected parent home endpoint (requires JWT)
+@app.get("/parent-home")
+async def parent_home(current_user=Depends(get_current_user)):
+    if current_user.get("role") != "parent":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    email = current_user.get("sub")
+    parent = db['parents'].find_one({'email': email})
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    swimmers = list(db['swimmers'].find({'parent_id': parent['_id']}))
+    for swimmer in swimmers:
+        swimmer['_id'] = str(swimmer['_id'])
+        swimmer['parent_id'] = str(swimmer['parent_id'])
+        if 'training_group' not in swimmer:
+            swimmer['training_group'] = 'Not Assigned'
+    parent['_id'] = str(parent['_id'])
+    parent.pop('password', None)
+    if 'profilePic' not in parent:
+        parent['profilePic'] = 'https://randomuser.me/api/portraits/lego/1.jpg'
+    for swimmer in swimmers:
+        if 'profilePic' not in swimmer:
+            swimmer['profilePic'] = 'https://randomuser.me/api/portraits/lego/2.jpg'
+    return {
+        'parent': parent,
+        'swimmers': swimmers
+    }
+
+# Coach (admin) login endpoint (returns JWT)
+@app.post("/admin-login")
+async def admin_login(request: Request):
+    data = await request.json()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    # For demo, treat any parent with email ending in 'admin.com' as coach
+    coach = db['parents'].find_one({'email': email})
+    if not coach or coach.get('password') != password or not email.endswith('admin.com'):
+        return JSONResponse({'error': 'Invalid admin credentials.'}, status_code=401)
+    access_token = create_access_token(
+        data={"sub": email, "role": "coach"},
+        expires_delta=datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    coach['_id'] = str(coach['_id'])
+    coach.pop('password', None)
+    if 'profilePic' not in coach:
+        coach['profilePic'] = 'https://randomuser.me/api/portraits/lego/3.jpg'
+    return JSONResponse({
+        'access_token': access_token,
+        'token_type': 'bearer',
+        'coach': coach
+    })
+
+# Protected coach home endpoint (requires JWT)
+@app.get("/admin-home")
+async def admin_home(current_user=Depends(get_current_user)):
+    if current_user.get("role") != "coach":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    email = current_user.get("sub")
+    coach = db['parents'].find_one({'email': email})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach not found")
+    coach['_id'] = str(coach['_id'])
+    coach.pop('password', None)
+    if 'profilePic' not in coach:
+        coach['profilePic'] = 'https://randomuser.me/api/portraits/lego/3.jpg'
+    return {
+        'coach': coach
+    }
+
+# Signout endpoint (stateless, just for frontend compatibility)
+@app.post("/parent-signout")
+async def parent_signout(request: Request):
+    return JSONResponse({"message": "Parent signed out successfully."})

@@ -1,0 +1,62 @@
+/* Landing.css */
+.landing {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.landing-header {
+  background-color: #0097A7;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+}
+
+.landing-logo {
+  margin: 0 auto;
+}
+
+.landing-nav {
+  margin-top: 20px;
+}
+
+.landing-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.landing-nav li {
+  margin-right: 20px;
+}
+
+.landing-nav a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.landing-hero {
+  background-image: linear-gradient(to bottom, #0097A7, #fff);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.landing-hero-content {
+  text-align: center;
+  color: #fff;
+}
+
+.landing-hero-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.landing-feature-icon {
+  font-size: 50
+
+}

@@ -1,0 +1,32 @@
+# Node modules
+node_modules/
+
+# Python virtual environments
+backend/myenv/
+browser-use/myenv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+
+# Build output
+dist/
+build/
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Misc
+*.swp
