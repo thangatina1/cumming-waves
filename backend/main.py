@@ -18,6 +18,21 @@ from pymongo import MongoClient
 import datetime
 import re
 from fastapi import Body
+import certifi
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
+from pymongo import MongoClient
+
+mongo_uri = (
+    f"mongodb+srv://{os.getenv('MONGO_USER')}:{os.getenv('MONGO_PASS')}"
+    f"@{os.getenv('MONGO_HOST')}/{os.getenv('MONGO_DBNAME')}?retryWrites=true&w=majority"
+)
+
+client = MongoClient(mongo_uri)
+db = client[os.getenv("MONGO_DBNAME")]
+
 
 app = FastAPI()
 
@@ -170,8 +185,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = MongoClient('mongodb://localhost:27017/')
-db = client['cumming-waves-db']
+username = os.environ.get('MONGO_USERNAME')
+password = os.environ.get('MONGO_PASSWORD')
+host = os.environ.get('MONGO_HOST')
+dbname = os.environ.get('MONGO_DBNAME')
+client = MongoClient(
+    f'mongodb+srv://{username}:{password}@{host}/{dbname}?retryWrites=true&w=majority',
+    tlsCAFile=certifi.where()
+)
+db = client[dbname]
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

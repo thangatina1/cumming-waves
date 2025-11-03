@@ -19,8 +19,16 @@ This application is a full-featured portal for the Cumming Waves Swim Team. It p
 - [MongoDB Community Edition](https://www.mongodb.com/try/download/community)
 
 ### 2. Start MongoDB
+
+To install MongoDB Community Edition using Homebrew on macOS, run:
+
+```bash
+brew tap mongodb/brew
+brew install mongodb-community
+
 If you have MongoDB installed via Homebrew:
 ```bash
+
 brew services start mongodb-community
 ```
 Or, if installed manually:

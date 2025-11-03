@@ -1,0 +1,8 @@
+/* Styles for Home component */
+
+.home-action-buttons {
+  display: flex;
+  gap: 96px;
+  margin-top: 16px;
+  padding-bottom: 32px;
+}
